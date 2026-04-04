@@ -1,0 +1,935 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <title>GSEA Assistant</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px 40px;
+            background: #f9f9f9;
+        }
+
+        /* Header */
+        .header {
+            display: flex;
+            align-items: center;
+            padding: 24px 0 20px;
+            border-bottom: 1px solid #e0e0e0;
+            margin-bottom: 28px;
+            overflow: visible;
+            min-height: 90px;
+        }
+
+        .header svg {
+            flex-shrink: 0;
+        }
+
+        .app-title {
+            margin-left: 28px;
+            border-left: 1px solid #ddd;
+            padding-left: 28px;
+        }
+
+        .app-title h1 {
+            font-size: 22px;
+            font-weight: 600;
+            color: #4a90d9;
+            margin-bottom: 2px;
+        }
+
+        .app-title p {
+            font-size: 13px;
+            color: #888;
+        }
+
+        /* Tabs */
+        .tabs {
+            display: flex;
+            gap: 4px;
+        }
+
+        .tab-btn {
+            padding: 10px 28px;
+            background: #ddd;
+            color: #555;
+            border: none;
+            border-radius: 6px 6px 0 0;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+        }
+
+        .tab-btn.active {
+            background: white;
+            color: #4a90d9;
+        }
+
+        .tab-content {
+            display: none;
+            background: white;
+            border-radius: 0 6px 6px 6px;
+            padding: 28px;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        h2 {
+            color: #444;
+            margin-top: 0;
+            margin-bottom: 16px;
+            font-size: 18px;
+        }
+
+        p.hint {
+            color: #555;
+            font-size: 13px;
+            line-height: 1.7;
+            margin-bottom: 24px;
+            background: #f0f7ff;
+            padding: 14px 18px;
+            border-left: 4px solid #4a90d9;
+            border-radius: 0 4px 4px 0;
+        }
+
+        input[type="file"] {
+            margin: 8px 0 12px;
+            display: block;
+        }
+
+        button.primary {
+            padding: 8px 20px;
+            background: #4a90d9;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        button.primary:hover {
+            background: #357abd;
+        }
+
+        button.secondary {
+            padding: 6px 14px;
+            background: none;
+            color: #4a90d9;
+            border: 1px solid #4a90d9;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 13px;
+        }
+
+        button.secondary:hover {
+            background: #eaf3fb;
+        }
+
+        button.green {
+            padding: 8px 20px;
+            background: #2e7d32;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        button.green:hover {
+            background: #1b5e20;
+        }
+
+        button.purple {
+            padding: 8px 20px;
+            background: #6a1b9a;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        button.purple:hover {
+            background: #4a148c;
+        }
+
+        .message {
+            margin-top: 10px;
+            color: #888;
+            font-style: italic;
+            font-size: 13px;
+        }
+
+        .rank-bar {
+            display: none;
+            align-items: center;
+            gap: 16px;
+            flex-wrap: wrap;
+            margin-top: 24px;
+            padding: 16px;
+            background: #f0f7ff;
+            border-radius: 6px;
+        }
+
+        .rank-bar label {
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        select {
+            padding: 7px 10px;
+            font-size: 14px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+
+        .gsea-row {
+            display: none;
+            margin-top: 12px;
+        }
+
+        .collapsible-section {
+            margin-top: 16px;
+        }
+
+        .collapsible-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+
+        .collapsible-header h3 {
+            margin: 0;
+            color: #444;
+            font-size: 15px;
+        }
+
+        .table-wrapper {
+            overflow-x: auto;
+        }
+
+        table.data-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        table.data-table th {
+            background: #4a90d9;
+            color: white;
+            padding: 10px 14px;
+            text-align: left;
+            white-space: nowrap;
+        }
+
+        table.data-table td {
+            padding: 8px 14px;
+            border-bottom: 1px solid #eee;
+            white-space: nowrap;
+        }
+
+        table.data-table tr:hover td {
+            background: #f0f7ff;
+        }
+
+        .upload-box {
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            padding: 20px;
+            margin-bottom: 20px;
+            background: #fafafa;
+        }
+
+        .upload-box h3 {
+            margin-top: 0;
+            color: #444;
+            margin-bottom: 6px;
+        }
+
+        .upload-box p {
+            font-size: 13px;
+            color: #888;
+            margin: 8px 0 10px;
+        }
+
+        .file-tag {
+            display: inline-block;
+            background: #e8f0fe;
+            color: #3367d6;
+            font-size: 12px;
+            padding: 2px 8px;
+            border-radius: 10px;
+            margin-bottom: 8px;
+            font-family: monospace;
+        }
+
+        .merge-section {
+            display: none;
+            margin-top: 28px;
+            padding-top: 24px;
+            border-top: 2px solid #eee;
+        }
+
+        .merge-actions {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+        }
+
+        table.summary-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+            margin-top: 12px;
+        }
+
+        table.summary-table th {
+            background: #4a90d9;
+            color: white;
+            padding: 10px 14px;
+            text-align: left;
+            white-space: nowrap;
+        }
+
+        table.summary-table td {
+            padding: 10px 14px;
+            border-bottom: 1px solid #eee;
+            white-space: nowrap;
+        }
+
+        table.summary-table tbody tr {
+            cursor: pointer;
+        }
+
+        table.summary-table tbody tr:hover td {
+            background: #e8f4fd;
+        }
+
+        table.summary-table tbody tr.selected td {
+            background: #d0eaff;
+        }
+
+        td.fdr-sig {
+            color: #2e7d32;
+            font-weight: bold;
+        }
+
+        td.fdr-ns {
+            color: #bbb;
+        }
+
+        .gene-panel {
+            display: none;
+            margin-top: 20px;
+            padding: 20px;
+            background: #f0f7ff;
+            border-radius: 8px;
+            border: 1px solid #c5e0f5;
+        }
+
+        .gene-panel h4 {
+            margin: 0 0 4px 0;
+            color: #2c5f8a;
+            font-size: 15px;
+        }
+
+        .gene-count {
+            font-size: 12px;
+            color: #888;
+            margin-bottom: 14px;
+        }
+
+        .gene-chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .gene-chip {
+            background: #4a90d9;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-family: monospace;
+        }
+
+        /* Footer */
+        .footer {
+            margin-top: 48px;
+            padding-top: 16px;
+            border-top: 1px solid #e0e0e0;
+            text-align: center;
+            font-size: 12px;
+            color: #aaa;
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- Header with logo -->
+    <div class="header">
+        <svg width="200" height="80" viewBox="0 0 200 80" xmlns="http://www.w3.org/2000/svg">
+            <line x1="16" y1="40" x2="42" y2="22" stroke="#4a90d9" stroke-width="1.2" opacity="0.45" />
+            <line x1="16" y1="40" x2="44" y2="56" stroke="#4a90d9" stroke-width="1.2" opacity="0.45" />
+            <line x1="42" y1="22" x2="44" y2="56" stroke="#4a90d9" stroke-width="1.2" opacity="0.45" />
+            <line x1="42" y1="22" x2="68" y2="14" stroke="#4a90d9" stroke-width="1.2" opacity="0.45" />
+            <line x1="44" y1="56" x2="68" y2="64" stroke="#4a90d9" stroke-width="1.2" opacity="0.45" />
+            <line x1="68" y1="14" x2="68" y2="64" stroke="#4a90d9" stroke-width="1.2" opacity="0.45" />
+            <line x1="68" y1="14" x2="88" y2="36" stroke="#4a90d9" stroke-width="1.2" opacity="0.45" />
+            <line x1="68" y1="64" x2="88" y2="36" stroke="#4a90d9" stroke-width="1.2" opacity="0.45" />
+            <circle cx="16" cy="40" r="5" fill="#4a90d9" opacity="0.9" />
+            <circle cx="42" cy="22" r="4" fill="#4a90d9" opacity="0.7" />
+            <circle cx="44" cy="56" r="4" fill="#4a90d9" opacity="0.7" />
+            <circle cx="68" cy="14" r="5" fill="#4a90d9" opacity="0.85" />
+            <circle cx="68" cy="64" r="5" fill="#4a90d9" opacity="0.85" />
+            <circle cx="88" cy="36" r="7" fill="#4a90d9" opacity="1" />
+            <text x="104" y="34" font-family="Arial" font-size="13" font-weight="600" fill="#4a90d9">Bio Lab Apps</text>
+            <text x="105" y="52" font-family="Arial" font-size="11" fill="#888">by Shira Aviv</text>
+        </svg>
+        <div class="app-title">
+            <h1>GSEA Assistant</h1>
+            <p>Prepare, analyze and explore GSEA results</p>
+        </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tabs">
+        <button class="tab-btn active" onclick="switchTab('prepare', this)">Prepare</button>
+        <button class="tab-btn" onclick="switchTab('results', this)">Results</button>
+    </div>
+
+    <!-- PREPARE TAB -->
+    <div id="tab-prepare" class="tab-content active">
+        <h2>Prepare rank file for GSEA</h2>
+        <p class="hint">
+            This tab helps you prepare your differentially expressed genes file for GSEA.
+            Upload your <strong>.txt</strong> file to inspect the data, then choose a ranking method
+            and generate a <strong>.rnk</strong> file ready to run on the GSEA website.
+        </p>
+        <input type="file" id="prepFileInput" accept=".txt" />
+        <button class="primary" onclick="uploadPrepFile()">Upload and Display</button>
+        <div class="message" id="prepMessage"></div>
+        <div class="collapsible-section" id="prepTableSection" style="display:none;">
+            <div class="collapsible-header">
+                <h3>Uploaded data</h3>
+                <button class="secondary" id="prepToggleBtn"
+                    onclick="toggleSection('prepTableWrapper', 'prepToggleBtn')">Hide table</button>
+            </div>
+            <div class="table-wrapper" id="prepTableWrapper"></div>
+        </div>
+        <div class="rank-bar" id="rankBar">
+            <label for="rankMethod">Ranking method:</label>
+            <select id="rankMethod">
+                <option value="l2fc">L2FC descending</option>
+                <option value="signed">sign(L2FC) x -log10(padj)</option>
+            </select>
+            <button class="primary" onclick="generateRankFile()">Generate Rank File</button>
+        </div>
+        <div class="gsea-row" id="gseaRow">
+            <button class="green" onclick="openGSEA()">Open GSEA Website</button>
+        </div>
+    </div>
+
+    <!-- RESULTS TAB -->
+    <div id="tab-results" class="tab-content">
+        <h2>Explore GSEA results</h2>
+        <p class="hint">
+            This tab merges two files produced by GSEA into one unified view.
+            For each enriched <strong>pathway</strong> (from the enrichment report), it finds the matching column
+            in the leading edge matrix and appends the <strong>leading edge genes</strong> — the specific genes
+            that drove the enrichment score. The result is a single table where each pathway row also
+            contains its gene list, which you can explore interactively or download as Excel.
+        </p>
+
+        <div class="upload-box">
+            <h3>1. GSEA Enrichment Report</h3>
+            <span class="file-tag">.tsv</span>
+            <p>The main results table from GSEA — one row per pathway, with enrichment scores and statistics. Typically
+                named gsea_report_for_na_pos_....tsv</p>
+            <input type="file" id="tsvFileInput" accept=".tsv" />
+            <button class="primary" onclick="uploadTSV()">Upload and Display</button>
+            <div class="message" id="tsvMessage"></div>
+            <div class="collapsible-section" id="tsvTableSection" style="display:none;">
+                <div class="collapsible-header">
+                    <h3>Enrichment report</h3>
+                    <button class="secondary" id="tsvToggleBtn"
+                        onclick="toggleSection('tsvTableWrapper', 'tsvToggleBtn')">Show table</button>
+                </div>
+                <div class="table-wrapper" id="tsvTableWrapper" style="display:none;"></div>
+            </div>
+        </div>
+
+        <div class="upload-box">
+            <h3>2. Leading Edge Matrix</h3>
+            <span class="file-tag">.gmx</span>
+            <p>One column per pathway, listing the genes that drove the enrichment score. Typically named
+                leading_edge_matrix_for_results.gmx</p>
+            <input type="file" id="gmxFileInput" accept=".gmx" />
+            <button class="primary" onclick="uploadGMX()">Upload and Display</button>
+            <div class="message" id="gmxMessage"></div>
+            <div class="collapsible-section" id="gmxTableSection" style="display:none;">
+                <div class="collapsible-header">
+                    <h3>Leading edge matrix</h3>
+                    <button class="secondary" id="gmxToggleBtn"
+                        onclick="toggleSection('gmxTableWrapper', 'gmxToggleBtn')">Show table</button>
+                </div>
+                <div class="table-wrapper" id="gmxTableWrapper" style="display:none;"></div>
+            </div>
+        </div>
+
+        <div class="merge-section" id="mergeSection">
+            <h3>Merged results</h3>
+            <div class="merge-actions">
+                <button class="primary" onclick="runMerge()">Merge and Display</button>
+                <button class="purple" id="downloadMergeBtn" style="display:none;"
+                    onclick="downloadMergedExcel()">Download as Excel (one column per gene)</button>
+                <button class="purple" id="downloadMergeBtn2" style="display:none;"
+                    onclick="downloadMergedExcelComma()">Download as Excel (genes in one cell)</button>
+            </div>
+            <div class="message" id="mergeMessage"></div>
+            <div id="summaryTableSection" style="display:none;">
+                <div class="collapsible-header">
+                    <h3>Pathway summary <span style="font-weight:normal; font-size:13px; color:#888;">- click a row to
+                            see its leading edge genes</span></h3>
+                    <button class="secondary" id="summaryToggleBtn"
+                        onclick="toggleSection('summaryTableWrapper', 'summaryToggleBtn')">Hide table</button>
+                </div>
+                <div class="table-wrapper" id="summaryTableWrapper"></div>
+            </div>
+            <!-- NES Bar Chart -->
+            <div id="nesChartSection" style="display:none; margin-top:28px;">
+                <div class="collapsible-header">
+                    <h3>NES bar chart <span style="font-weight:normal; font-size:13px; color:#888;">- green = FDR below
+                            0.05, grey = not significant</span></h3>
+                    <button class="secondary" id="nesChartToggleBtn"
+                        onclick="toggleSection('nesChartWrapper', 'nesChartToggleBtn')">Hide chart</button>
+                </div>
+                <div id="nesChartWrapper"
+                    style="margin-top:12px; background:white; padding:16px; border-radius:6px; border:1px solid #eee;">
+                    <canvas id="nesChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Leading Edge Heatmap -->
+            <div id="heatmapSection" style="display:none; margin-top:28px;">
+                <div class="collapsible-header">
+                    <h3>Leading edge heatmap <span style="font-weight:normal; font-size:13px; color:#888;">- genes
+                            appearing in 2 or more pathways</span></h3>
+                    <button class="secondary" id="heatmapToggleBtn"
+                        onclick="toggleSection('heatmapWrapper', 'heatmapToggleBtn')">Show heatmap</button>
+                </div>
+                <div id="heatmapWrapper" style="display:none; margin-top:12px; overflow-x:auto;">
+                    <div id="heatmapContainer"></div>
+                </div>
+            </div>
+
+            <div class="gene-panel" id="genePanel">
+                <h4 id="genePanelTitle"></h4>
+                <div class="gene-count" id="genePanelCount"></div>
+                <div class="gene-chips" id="geneChips"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+        &copy; 2025 Shira Aviv. All rights reserved.
+    </div>
+
+    <script>
+        var uploadedPrepData = null;
+        var uploadedPrepFileName = "";
+        var tsvData = null;
+        var gmxData = null;
+        var mergedData = null;
+
+        function switchTab(tabName, btn) {
+            document.querySelectorAll(".tab-content").forEach(function (el) { el.classList.remove("active"); });
+            document.querySelectorAll(".tab-btn").forEach(function (el) { el.classList.remove("active"); });
+            document.getElementById("tab-" + tabName).classList.add("active");
+            btn.classList.add("active");
+        }
+
+        function toggleSection(wrapperId, btnId) {
+            var wrapper = document.getElementById(wrapperId);
+            var btn = document.getElementById(btnId);
+            var visible = wrapper.style.display !== "none";
+            wrapper.style.display = visible ? "none" : "block";
+            btn.textContent = visible ? "Show table" : "Hide table";
+        }
+
+        async function uploadPrepFile() {
+            var fileInput = document.getElementById("prepFileInput");
+            var message = document.getElementById("prepMessage");
+            if (!fileInput.files.length) { message.textContent = "Please select a file first."; return; }
+            message.textContent = "Reading file...";
+            uploadedPrepFileName = fileInput.files[0].name.replace(/\.txt$/i, "");
+            var text = await fileInput.files[0].text();
+            var data = parseTabFile(text);
+            if (!data.rows || !data.rows.length) { message.textContent = "No data found."; return; }
+            uploadedPrepData = data;
+            message.textContent = "Showing " + data.rows.length + " rows.";
+            document.getElementById("prepTableWrapper").innerHTML = buildDataTable(data.headers, data.rows);
+            document.getElementById("prepTableSection").style.display = "block";
+            document.getElementById("rankBar").style.display = "flex";
+            document.getElementById("gseaRow").style.display = "block";
+        }
+
+        function generateRankFile() {
+            if (!uploadedPrepData) return;
+            var method = document.getElementById("rankMethod").value;
+            var lines = [];
+            for (var i = 0; i < uploadedPrepData.rows.length; i++) {
+                var row = uploadedPrepData.rows[i];
+                var gene = row[uploadedPrepData.headers[0]];
+                var l2fc = parseFloat(row["L2FC"]);
+                var padj = parseFloat(row["padj_wilcox"]);
+                var score = method === "l2fc" ? l2fc : (l2fc >= 0 ? 1 : -1) * (-Math.log10(padj));
+                lines.push(gene + "\t" + score.toFixed(4));
+            }
+            lines.sort(function (a, b) { return parseFloat(b.split("\t")[1]) - parseFloat(a.split("\t")[1]); });
+            downloadText(lines.join("\n"), uploadedPrepFileName + ".rnk");
+        }
+
+        function openGSEA() { window.open("https://www.gsea-msigdb.org/gsea/index.jsp", "_blank"); }
+
+        async function uploadTSV() {
+            var fileInput = document.getElementById("tsvFileInput");
+            var message = document.getElementById("tsvMessage");
+            if (!fileInput.files.length) { message.textContent = "Please select a file first."; return; }
+            message.textContent = "Uploading...";
+            var text = await fileInput.files[0].text();
+            tsvData = parseTabFile(text);
+            message.textContent = "Loaded: " + tsvData.rows.length + " pathways.";
+            document.getElementById("tsvTableWrapper").innerHTML = buildDataTable(tsvData.headers, tsvData.rows);
+            document.getElementById("tsvTableSection").style.display = "block";
+            document.getElementById("tsvTableWrapper").style.display = "none";
+            document.getElementById("tsvToggleBtn").textContent = "Show table";
+            checkBothLoaded();
+        }
+
+        async function uploadGMX() {
+            var fileInput = document.getElementById("gmxFileInput");
+            var message = document.getElementById("gmxMessage");
+            if (!fileInput.files.length) { message.textContent = "Please select a file first."; return; }
+            message.textContent = "Uploading...";
+            var text = await fileInput.files[0].text();
+            gmxData = parseTabFile(text);
+            message.textContent = "Loaded: " + gmxData.headers.length + " pathways in matrix.";
+            document.getElementById("gmxTableWrapper").innerHTML = buildDataTable(gmxData.headers, gmxData.rows);
+            document.getElementById("gmxTableSection").style.display = "block";
+            document.getElementById("gmxTableWrapper").style.display = "none";
+            document.getElementById("gmxToggleBtn").textContent = "Show table";
+            checkBothLoaded();
+        }
+
+        function checkBothLoaded() {
+            if (tsvData && gmxData) { document.getElementById("mergeSection").style.display = "block"; }
+        }
+
+        function runMerge() {
+            var message = document.getElementById("mergeMessage");
+            if (!tsvData || !gmxData) { message.textContent = "Please upload both files first."; return; }
+            var gmxHeaders = gmxData.headers.map(function (h) { return h.replace(/_signal$/, ""); });
+            var summaryKeys = ["NAME", "SIZE", "ES", "NES", "NOM p-val", "FDR q-val", "FWER p-val", "RANK AT MAX", "LEADING EDGE"];
+            mergedData = [];
+            var matched = 0;
+            for (var i = 0; i < tsvData.rows.length; i++) {
+                var t1row = tsvData.rows[i];
+                var pathway = (t1row["NAME"] || "").trim();
+                var colIdx = -1;
+                for (var j = 0; j < gmxHeaders.length; j++) {
+                    if (gmxHeaders[j] === pathway) { colIdx = j; break; }
+                }
+                var genes = [];
+                if (colIdx >= 0) {
+                    matched++;
+                    for (var r = 1; r < gmxData.rows.length; r++) {
+                        var gene = (gmxData.rows[r][gmxData.headers[colIdx]] || "").trim();
+                        if (gene && gene !== "na") { genes.push(gene); }
+                    }
+                }
+                var mergedRow = {};
+                for (var k = 0; k < summaryKeys.length; k++) { mergedRow[summaryKeys[k]] = t1row[summaryKeys[k]] || ""; }
+                mergedRow["__genes__"] = genes;
+                mergedData.push(mergedRow);
+            }
+            message.textContent = matched + " of " + tsvData.rows.length + " pathways matched with leading edge genes.";
+            var html = "<table class='summary-table'><thead><tr>";
+            for (var k = 0; k < summaryKeys.length; k++) { html += "<th>" + summaryKeys[k] + "</th>"; }
+            html += "</tr></thead><tbody>";
+            for (var i = 0; i < mergedData.length; i++) {
+                var row = mergedData[i];
+                var fdr = parseFloat(row["FDR q-val"]);
+                var isSig = !isNaN(fdr) && fdr < 0.05;
+                html += "<tr onclick='showGenes(" + i + ", this)'>";
+                for (var k = 0; k < summaryKeys.length; k++) {
+                    var val = row[summaryKeys[k]];
+                    var cls = (summaryKeys[k] === "FDR q-val") ? (isSig ? " class='fdr-sig'" : " class='fdr-ns'") : "";
+                    html += "<td" + cls + ">" + val + "</td>";
+                }
+                html += "</tr>";
+            }
+            html += "</tbody></table>";
+            document.getElementById("summaryTableWrapper").innerHTML = html;
+            document.getElementById("summaryTableSection").style.display = "block";
+            document.getElementById("downloadMergeBtn").style.display = "inline-block";
+            document.getElementById("downloadMergeBtn2").style.display = "inline-block";
+            document.getElementById("genePanel").style.display = "none";
+            renderNESChart();
+            renderHeatmap();
+        }
+
+        function showGenes(rowIdx, trEl) {
+            document.querySelectorAll("table.summary-table tbody tr").forEach(function (r) { r.classList.remove("selected"); });
+            trEl.classList.add("selected");
+            var row = mergedData[rowIdx];
+            var genes = row["__genes__"];
+            document.getElementById("genePanelTitle").textContent = row["NAME"];
+            document.getElementById("genePanelCount").textContent = genes.length + " leading edge genes";
+            var chips = "";
+            for (var i = 0; i < genes.length; i++) { chips += "<span class='gene-chip'>" + genes[i] + "</span>"; }
+            document.getElementById("geneChips").innerHTML = chips || "<em style='color:#aaa;'>No genes found for this pathway.</em>";
+            document.getElementById("genePanel").style.display = "block";
+        }
+
+        function downloadMergedExcel() {
+            if (!mergedData) return;
+            var summaryKeys = ["NAME", "SIZE", "ES", "NES", "NOM p-val", "FDR q-val", "FWER p-val", "RANK AT MAX", "LEADING EDGE"];
+            var maxGenes = 0;
+            for (var i = 0; i < mergedData.length; i++) {
+                if (mergedData[i]["__genes__"].length > maxGenes) maxGenes = mergedData[i]["__genes__"].length;
+            }
+            var geneHeaders = [];
+            for (var g = 1; g <= maxGenes; g++) { geneHeaders.push("Gene_" + g); }
+            var wsData = [summaryKeys.concat(geneHeaders)];
+            for (var i = 0; i < mergedData.length; i++) {
+                var row = mergedData[i];
+                var cols = summaryKeys.map(function (k) { return row[k] || ""; });
+                var genes = row["__genes__"];
+                for (var g = 0; g < maxGenes; g++) { cols.push(genes[g] || ""); }
+                wsData.push(cols);
+            }
+            var wb = XLSX.utils.book_new();
+            var ws = XLSX.utils.aoa_to_sheet(wsData);
+            XLSX.utils.book_append_sheet(wb, ws, "GSEA Merged Results");
+            XLSX.writeFile(wb, "gsea_merged_results.xlsx");
+        }
+
+        function downloadMergedExcelComma() {
+            if (!mergedData) return;
+            var summaryKeys = ["NAME", "SIZE", "ES", "NES", "NOM p-val", "FDR q-val", "FWER p-val", "RANK AT MAX", "LEADING EDGE"];
+            var wsData = [summaryKeys.concat(["Genes"])];
+            for (var i = 0; i < mergedData.length; i++) {
+                var row = mergedData[i];
+                var cols = summaryKeys.map(function (k) { return row[k] || ""; });
+                cols.push(row["__genes__"].join(", "));
+                wsData.push(cols);
+            }
+            var wb = XLSX.utils.book_new();
+            var ws = XLSX.utils.aoa_to_sheet(wsData);
+            XLSX.utils.book_append_sheet(wb, ws, "GSEA Merged Results");
+            XLSX.writeFile(wb, "gsea_merged_results_compact.xlsx");
+        }
+
+        var nesChartInstance = null;
+
+        function renderNESChart() {
+            if (!mergedData) return;
+
+            var labels = [];
+            var values = [];
+            var colors = [];
+
+            for (var i = 0; i < mergedData.length; i++) {
+                var row = mergedData[i];
+                var nes = parseFloat(row["NES"]);
+                var fdr = parseFloat(row["FDR q-val"]);
+                if (isNaN(nes)) continue;
+                labels.push(row["NAME"].replace(/HALLMARK_/g, "").replace(/_/g, " "));
+                values.push(nes);
+                colors.push(!isNaN(fdr) && fdr < 0.05 ? "#2e7d32" : "#bbb");
+            }
+
+            // Sort by NES descending
+            var combined = labels.map(function (l, i) { return { label: l, value: values[i], color: colors[i] }; });
+            combined.sort(function (a, b) { return b.value - a.value; });
+            labels = combined.map(function (d) { return d.label; });
+            values = combined.map(function (d) { return d.value; });
+            colors = combined.map(function (d) { return d.color; });
+
+            document.getElementById("nesChartSection").style.display = "block";
+
+            var ctx = document.getElementById("nesChart").getContext("2d");
+            if (nesChartInstance) { nesChartInstance.destroy(); }
+
+            var barHeight = 32;
+            document.getElementById("nesChart").height = labels.length * barHeight + 60;
+
+            nesChartInstance = new Chart(ctx, {
+                type: "bar",
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: values,
+                        backgroundColor: colors,
+                        borderRadius: 3,
+                        borderSkipped: false
+                    }]
+                },
+                options: {
+                    indexAxis: "y",
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: function (ctx) { return "NES: " + ctx.parsed.x.toFixed(3); }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            title: { display: true, text: "Normalized Enrichment Score (NES)", font: { size: 12 } },
+                            grid: { color: "#f0f0f0" }
+                        },
+                        y: {
+                            ticks: { font: { size: 11 } },
+                            grid: { display: false }
+                        }
+                    }
+                }
+            });
+        }
+
+        function renderHeatmap() {
+            if (!mergedData) return;
+
+            // Build gene -> pathways map
+            var genePathways = {};
+            var pathwayNames = [];
+
+            for (var i = 0; i < mergedData.length; i++) {
+                var pathway = mergedData[i]["NAME"].replace(/HALLMARK_/g, "").replace(/_/g, " ");
+                pathwayNames.push(pathway);
+                var genes = mergedData[i]["__genes__"];
+                for (var j = 0; j < genes.length; j++) {
+                    var gene = genes[j];
+                    if (!genePathways[gene]) genePathways[gene] = {};
+                    genePathways[gene][pathway] = 1;
+                }
+            }
+
+            // Filter genes appearing in >= 2 pathways
+            var filteredGenes = [];
+            for (var gene in genePathways) {
+                if (Object.keys(genePathways[gene]).length >= 2) {
+                    filteredGenes.push(gene);
+                }
+            }
+
+            // Sort genes by number of pathways they appear in (descending)
+            filteredGenes.sort(function (a, b) {
+                return Object.keys(genePathways[b]).length - Object.keys(genePathways[a]).length;
+            });
+
+            if (filteredGenes.length === 0) {
+                document.getElementById("heatmapContainer").innerHTML = "<p style='color:#888; font-style:italic; font-size:13px;'>No genes found appearing in 2 or more pathways.</p>";
+                document.getElementById("heatmapSection").style.display = "block";
+                return;
+            }
+
+            // Build heatmap table
+            var cellSize = 20;
+            var labelWidth = 110;
+            var geneColWidth = 70;
+            var totalWidth = labelWidth + filteredGenes.length * geneColWidth;
+
+            var html = "<table style='border-collapse:collapse; font-size:11px; font-family:monospace;'>";
+
+            // Gene header row (rotated via writing-mode)
+            html += "<tr><th style='width:" + labelWidth + "px;'></th>";
+            for (var j = 0; j < filteredGenes.length; j++) {
+                html += "<th style='width:" + geneColWidth + "px; padding:4px 2px; text-align:center; vertical-align:bottom;'>" +
+                    "<div style='writing-mode:vertical-rl; transform:rotate(180deg); height:80px; display:flex; align-items:center; color:#444; font-weight:500;'>" +
+                    filteredGenes[j] + "</div></th>";
+            }
+            html += "</tr>";
+
+            // Pathway rows
+            for (var i = 0; i < pathwayNames.length; i++) {
+                var pathway = pathwayNames[i];
+                html += "<tr>";
+                html += "<td style='padding:3px 8px 3px 0; text-align:right; color:#444; white-space:nowrap; font-family:Arial; font-size:11px;'>" + pathway + "</td>";
+                for (var j = 0; j < filteredGenes.length; j++) {
+                    var gene = filteredGenes[j];
+                    var present = genePathways[gene] && genePathways[gene][pathway];
+                    var bg = present ? "#4a90d9" : "#f0f0f0";
+                    var title = present ? gene + " in " + pathway : "";
+                    html += "<td title='" + title + "' style='width:" + geneColWidth + "px; height:" + cellSize + "px; background:" + bg + "; border:1px solid white; border-radius:2px;'></td>";
+                }
+                html += "</tr>";
+            }
+            html += "</table>";
+
+            document.getElementById("heatmapContainer").innerHTML = html;
+            document.getElementById("heatmapSection").style.display = "block";
+        }
+
+        function parseTabFile(text) {
+            var lines = text.trim().split("\n");
+            var headers = lines[0].split("\t").map(function (h) { return h.trim(); });
+            var rows = [];
+            for (var i = 1; i < lines.length; i++) {
+                var cols = lines[i].split("\t");
+                var row = {};
+                for (var j = 0; j < headers.length; j++) { row[headers[j]] = cols[j] !== undefined ? cols[j].trim() : ""; }
+                rows.push(row);
+            }
+            return { headers: headers, rows: rows };
+        }
+
+        function buildDataTable(headers, rows) {
+            var html = "<table class='data-table'><thead><tr>";
+            for (var i = 0; i < headers.length; i++) { html += "<th>" + headers[i] + "</th>"; }
+            html += "</tr></thead><tbody>";
+            for (var i = 0; i < rows.length; i++) {
+                html += "<tr>";
+                for (var j = 0; j < headers.length; j++) { html += "<td>" + (rows[i][headers[j]] || "") + "</td>"; }
+                html += "</tr>";
+            }
+            html += "</tbody></table>";
+            return html;
+        }
+
+        function downloadText(content, filename) {
+            var blob = new Blob([content], { type: "text/plain" });
+            var url = URL.createObjectURL(blob);
+            var a = document.createElement("a");
+            a.href = url; a.download = filename; a.click();
+            URL.revokeObjectURL(url);
+        }
+    </script>
+</body>
+
+</html>
